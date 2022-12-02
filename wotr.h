@@ -1,7 +1,7 @@
 #ifndef WOTR_H
 #define WOTR_H
 
-#include <vector>
+#include <string>
 
 typedef struct {
     size_t ksize;
