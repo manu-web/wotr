@@ -19,5 +19,10 @@ extern "C" {
   
   int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len) {
     return w->rep->WotrGet(offset, data, len);
-  } 
+  }
+
+  void wotr_close(wotr_t* w) {
+    delete w->rep;
+    delete w;
+  }
 }
