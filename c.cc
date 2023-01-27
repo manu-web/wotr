@@ -1,12 +1,21 @@
 #include "c.h"
 #include "wotr.h"
 #include <string>
+#include <system_error>
+#include <string.h>
 
 extern "C" {
   struct wotr_t      { Wotr* rep; };
 
-  wotr_t* wotr_open(const char* logfile) {
-    Wotr* w = new Wotr(logfile);
+  wotr_t* wotr_open(const char* logfile, char** errptr) {
+    Wotr* w;
+    try {
+      w = new Wotr(logfile);
+    } catch (const std::system_error& e) {
+      *errptr = strdup(e.what());
+      return nullptr;
+    }
+
     wotr_t* res = new wotr_t;
     res->rep = w;
     return res;

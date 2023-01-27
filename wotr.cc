@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <system_error>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -11,8 +12,7 @@
 Wotr::Wotr(const char* logname) {
     _logname = std::string(logname);
     if ((_log = open(logname, O_RDWR | O_CREAT | O_APPEND, S_IRWXU)) < 0) {
-        std::cout << "Error opening logfile" << std::endl;
-        exit(1);
+      throw std::system_error(errno, std::generic_category(), logname);
     }
 }
 
