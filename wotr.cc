@@ -55,8 +55,10 @@ int Wotr::WotrWrite(std::string& logdata) {
         return -1;
     }
 
-    if (safe_write(_log, logdata.data(), logdata.size()) < 0)
+    if (safe_write(_log, logdata.data(), logdata.size()) < 0) {
         std::cout << strerror(errno) << std::endl;
+        return -1;
+    }
 
     return 0;
 }
@@ -64,9 +66,15 @@ int Wotr::WotrWrite(std::string& logdata) {
 int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
     item_header *header = (item_header*)malloc(sizeof(item_header));
     
-    lseek(_log, offset, SEEK_SET);
+    if (lseek(_log, offset, SEEK_SET) < 0) {
+      std::cout << strerror(errno) << std::endl;
+      return -1;
+    }
 
-    safe_read(_log, (char*)header, sizeof(item_header));
+    if (safe_read(_log, (char*)header, sizeof(item_header)) < 0) {
+      std::cout << strerror(errno) << std::endl;
+      return -1;
+    }
 
     char *kbuf = (char*)malloc(header->ksize * sizeof(char));
     char *vbuf = (char*)malloc(header->vsize * sizeof(char));
