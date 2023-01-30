@@ -13,8 +13,9 @@ public:
   Wotr (const char* logname);
 
   size_t CurrentOffset();
-  int WotrWrite(std::string& logdata);
+  int WotrWrite(std::string& logdata, int flush);
   int WotrGet(size_t offset, char** data, size_t* len);
+  int Flush();
 
 private:
     std::string _logname;

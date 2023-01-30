@@ -21,9 +21,9 @@ extern "C" {
     return res;
   }
     
-  int wotr_write(wotr_t* w, const char* logdata, size_t len) {
+  int wotr_write(wotr_t* w, const char* logdata, size_t len, int flush) {
     std::string data(logdata, len);
-    return w->rep->WotrWrite(data);
+    return w->rep->WotrWrite(data, flush);
   }
   
   int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len) {
@@ -33,5 +33,9 @@ extern "C" {
   void wotr_close(wotr_t* w) {
     delete w->rep;
     delete w;
+  }
+
+  int wotr_flush(wotr_t* w) {
+    return w->rep->Flush();
   }
 }

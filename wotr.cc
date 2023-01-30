@@ -49,7 +49,7 @@ size_t Wotr::CurrentOffset() {
     return (size_t)off;
 }    
 // append to log
-int Wotr::WotrWrite(std::string& logdata) {
+int Wotr::WotrWrite(std::string& logdata, int flush) {
     if (lseek(_log, 0, SEEK_END) < 0) {
         std::cout << "Error seeking log" << std::endl;
         return -1;
@@ -58,6 +58,10 @@ int Wotr::WotrWrite(std::string& logdata) {
     if (safe_write(_log, logdata.data(), logdata.size()) < 0) {
         std::cout << strerror(errno) << std::endl;
         return -1;
+    }
+
+    if (flush) {
+      return fsync(_log);
     }
 
     return 0;
@@ -89,5 +93,9 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
     free(kbuf);
 
     return 0;
+}
+
+int Wotr::Flush() {
+  return fsync(_log);
 }
     
