@@ -80,9 +80,6 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
     return -1;
   }
 
-  std::cout << "(hdr) reading size: " << sizeof(item_header) << " from offset "
-            << offset << std::endl;
-
   if (safe_read(_log, (char*)header, sizeof(item_header)) < 0) {
     return -1;
   }
