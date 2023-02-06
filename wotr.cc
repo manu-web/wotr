@@ -68,20 +68,22 @@ int Wotr::WotrWrite(std::string& logdata, int flush) {
     return fsync(_log);
   }
 
+  size_t ret = (size_t)_offset;
   _offset += logdata.size();
-  return 0;
+  return ret;
 }
 
 int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
   item_header *header = (item_header*)malloc(sizeof(item_header));
     
   if (lseek(_log, offset, SEEK_SET) < 0) {
-    std::cout << "wotrget read seek: " << strerror(errno) << std::endl;
     return -1;
   }
 
+  std::cout << "(hdr) reading size: " << sizeof(item_header) << " from offset "
+            << offset << std::endl;
+
   if (safe_read(_log, (char*)header, sizeof(item_header)) < 0) {
-    std::cout << "wotrget read header: " << strerror(errno) << std::endl;
     return -1;
   }
 
@@ -90,6 +92,7 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
 
   if (safe_read(_log, kbuf, header->ksize) < 0)
     std::cout << "wotrget read key: " << strerror(errno) << std::endl;
+
   if (safe_read(_log, vbuf, header->vsize) < 0)
     std::cout << "wotrget read value: " << strerror(errno) << std::endl;
 
