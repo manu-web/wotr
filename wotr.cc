@@ -10,8 +10,6 @@
 #include <string.h>
 #include "wotr.h"
 
-std::mutex write_mutex;
-
 Wotr::Wotr(const char* logname) {
   _logname = std::string(logname);
   _offset = 0;
@@ -45,15 +43,9 @@ int safe_read(int fd, char* buf, size_t size) {
   return 0;
 }
 
-size_t Wotr::CurrentOffset() {
-  // lock this for now... not sure if it is necessary
-  std::lock_guard<std::mutex> guard(write_mutex);
-  return (size_t)_offset;
-}
-
 // append to log
 int Wotr::WotrWrite(std::string& logdata, int flush) {
-  std::lock_guard<std::mutex> guard(write_mutex);
+  std::scoped_lock lock(_m);
   if (lseek(_log, _offset, SEEK_SET) < 0) {
     std::cout << "wotrwrite: Error seeking log" << std::endl;
     return -1;

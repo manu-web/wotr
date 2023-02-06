@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(wotr)
+set(CMAKE_CXX_STANDARD 17)
 
 add_library(wotr STATIC "wotr.cc")
 add_library(wotr_shared SHARED "wotr.cc")
