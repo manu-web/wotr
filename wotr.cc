@@ -14,6 +14,7 @@ std::mutex write_mutex;
 
 Wotr::Wotr(const char* logname) {
   _logname = std::string(logname);
+  _offset = 0;
   if ((_log = open(logname, O_RDWR | O_CREAT | O_APPEND, S_IRWXU)) < 0) {
     std::cout << "Error opening wotr" << std::endl;
     throw std::system_error(errno, std::generic_category(), logname);
@@ -45,18 +46,15 @@ int safe_read(int fd, char* buf, size_t size) {
 }
 
 size_t Wotr::CurrentOffset() {
-  off_t off;
-  if ((off = lseek(_log, 0, SEEK_END)) < 0) {
-    std::cout << "wotroffset: Error seeking log" << std::endl;
-    return -1;
-  }
-  return (size_t)off;
+  // lock this for now... not sure if it is necessary
+  std::lock_guard<std::mutex> guard(write_mutex);
+  return (size_t)_offset;
 }
 
 // append to log
 int Wotr::WotrWrite(std::string& logdata, int flush) {
   std::lock_guard<std::mutex> guard(write_mutex);
-  if (lseek(_log, 0, SEEK_END) < 0) {
+  if (lseek(_log, _offset, SEEK_SET) < 0) {
     std::cout << "wotrwrite: Error seeking log" << std::endl;
     return -1;
   }
@@ -70,6 +68,7 @@ int Wotr::WotrWrite(std::string& logdata, int flush) {
     return fsync(_log);
   }
 
+  _offset += logdata.size();
   return 0;
 }
 
@@ -104,4 +103,8 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
 int Wotr::Flush() {
   return fsync(_log);
 }
-    
+
+int Wotr::CloseAndDestroy() {
+  close(_log);
+  return unlink(_logname.c_str());
+}
