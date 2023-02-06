@@ -56,8 +56,8 @@ int Wotr::WotrWrite(std::string& logdata, int flush) {
     return -1;
   }
 
-  if (flush) {
-    return fsync(_log);
+  if (flush && fsync(_log) < 0) {
+    return -1;
   }
 
   size_t ret = (size_t)_offset;
