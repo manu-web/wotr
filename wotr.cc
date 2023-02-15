@@ -108,16 +108,19 @@ logoffset_t* Wotr::WotrWrite(std::string& logdata, int flush) {
 int Wotr::WotrGet(size_t offset, char** data, size_t* len, size_t version) {
   // if version = 0, any offset is accepted
   if (version != 0 && offset >= (size_t)(_versions[version])) {
+    std::cout << "bad version number" << std::endl;
     return -1;
   }
   
   item_header *header = (item_header*)malloc(sizeof(item_header));
     
   if (lseek(_log, offset, SEEK_SET) < 0) {
+    std::cout << "bad lseek at offset " << offset << strerror(errno) << std::endl;
     return -1;
   }
 
   if (safe_read(_log, (char*)header, sizeof(item_header)) < 0) {
+    std::cout << "bad read header" << std::endl;
     return -1;
   }
 
