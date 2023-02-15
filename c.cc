@@ -6,6 +6,7 @@
 
 extern "C" {
   struct wotr_t      { Wotr* rep; };
+  struct logoffset_t { LogOffset* rep; };
 
   wotr_t* wotr_open(const char* logfile, char** errptr) {
     Wotr* w;
@@ -20,14 +21,29 @@ extern "C" {
     res->rep = w;
     return res;
   }
+
+  int wotr_register(wotr_t* w, const char* pathstr, size_t len) {
+    std::string path(pathstr, len);
+    return w->rep->Register(path);
+  }
+
+  void wotr_unregister(wotr_t* w, int ident) {
+    return w->rep->UnRegister(ident);
+  }
+
+  int wotr_numregistered(wotr_t* w) {
+    return w->rep->NumRegistered();
+  }
     
-  int wotr_write(wotr_t* w, const char* logdata, size_t len, int flush) {
+  logoffset_t* wotr_write(wotr_t* w, const char* logdata, size_t len,
+                         int flush) {
     std::string data(logdata, len);
-    return w->rep->WotrWrite(data, flush);
+    return w->rep->WotrWrite(data, flush, version);
   }
   
-  int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len) {
-    return w->rep->WotrGet(offset, data, len);
+  int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len,
+               size_t version) {
+    return w->rep->WotrGet(offset, data, len, version);
   }
 
   void wotr_close(wotr_t* w) {

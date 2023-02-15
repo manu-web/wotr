@@ -14,11 +14,29 @@ extern "C" {
 
 typedef struct wotr_t wotr_t;
 
-extern WOTR_LIBRARY_API wotr_t* wotr_open(const char* logfile, char** errptr);
-    extern WOTR_LIBRARY_API int wotr_write(wotr_t* w, const char* logdata, size_t len, int flush);
-extern WOTR_LIBRARY_API int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len);
-extern WOTR_LIBRARY_API void wotr_close(wotr_t* w);
-extern WOTR_LIBRARY_API int wotr_flush(wotr_t* w);
+extern WOTR_LIBRARY_API
+wotr_t* wotr_open(const char* logfile, char** errptr);
+    
+extern WOTR_LIBRARY_API
+int wotr_register(wotr_t* w, const char* pathstr, size_t len);
+    
+extern WOTR_LIBRARY_API
+void wotr_unregister(wotr_t* w, int ident);
+    
+extern WOTR_LIBRARY_API
+int wotr_numregister(wotr_t* w);
+    
+extern WOTR_LIBRARY_API
+logoffset_t* wotr_write(wotr_t* w, const char* logdata, size_t len, int flush);
+    
+extern WOTR_LIBRARY_API
+int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len, size_t version);
+    
+extern WOTR_LIBRARY_API
+void wotr_close(wotr_t* w);
+    
+extern WOTR_LIBRARY_API
+int wotr_flush(wotr_t* w);
 
 
 #ifdef __cplusplus
