@@ -58,26 +58,6 @@ int safe_write(int fd, const char* data, size_t size) {
   return 0;
 }
 
-int safe_read(int fd, char* buf, size_t size) {
-  char* dest = buf;
-  size_t left = size;
-
-  while (left != 0) {
-    size_t bytes_to_read = left;
-
-    ssize_t done = read(fd, dest, bytes_to_read);
-    if (done < 0) {
-      if (errno == EINTR) {
-        continue;
-      }
-      return -1;
-    }
-    left -= done;
-    dest += done;
-  }
-  return 0;
-}
-
 // append to log
 logoffset_t* Wotr::WotrWrite(std::string& logdata, int flush) {
   std::scoped_lock lock(_m);
@@ -113,14 +93,11 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len, size_t version) {
   }
   
   item_header *header = (item_header*)malloc(sizeof(item_header));
-    
-  if (lseek(_log, offset, SEEK_SET) < 0) {
-    std::cout << "bad lseek at offset " << offset << strerror(errno) << std::endl;
-    return -1;
-  }
 
-  if (safe_read(_log, (char*)header, sizeof(item_header)) < 0) {
-    std::cout << "bad read header" << std::endl;
+  // read the header
+  // use pread for thread safety
+  if (pread(_log, (char*)header, sizeof(item_header), (off_t)offset) < 0) {
+    std::cout << "bad read header: " << strerror(errno) << std::endl;
     return -1;
   }
 
@@ -128,15 +105,23 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len, size_t version) {
   char *kbuf = (char*)malloc(header->ksize * sizeof(char));
   char *vbuf = (char*)malloc(header->vsize * sizeof(char));
 
-  if (safe_read(_log, kbuf, header->ksize) < 0)
-    std::cout << "wotrget read key: " << strerror(errno) << std::endl;
+  off_t key_offset = (off_t)offset + sizeof(item_header);
+  off_t value_offset = key_offset + header->ksize;
 
-  if (safe_read(_log, vbuf, header->vsize) < 0)
+  if (pread(_log, kbuf, header->ksize, key_offset) < 0) {
+    std::cout << "wotrget read key: " << strerror(errno) << std::endl;
+    return -1;
+  }
+
+  if (pread(_log, vbuf, header->vsize, value_offset) < 0) {
     std::cout << "wotrget read value: " << strerror(errno) << std::endl;
+    return -1;
+  }
 
   *data = vbuf;
   *len = header->vsize;
   free(kbuf);
+  free(header);
 
   return 0;
 }

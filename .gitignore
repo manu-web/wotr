@@ -1,4 +1,6 @@
 *~
 *.a
 *.so
+*.dylib
 CMakeFiles/
+build/
