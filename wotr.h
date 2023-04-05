@@ -23,6 +23,7 @@ public:
 
   logoffset_t* WotrWrite(std::string& logdata, int flush);
   int WotrGet(size_t offset, char** data, size_t* len, size_t version);
+  int WotrPGet(size_t offset, size_t len, char** data);
   int Flush();
 
   int Register(std::string path);

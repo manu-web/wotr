@@ -47,6 +47,10 @@ extern "C" {
     return w->rep->WotrGet(offset, data, len, version);
   }
 
+  int wotr_p_get(wotr_t* w, size_t offset, size_t len, char** data) {
+    return w->rep->WotrPGet(offset, len, data);
+  }
+
   void wotr_close(wotr_t* w) {
     delete w->rep;
     delete w;

@@ -32,7 +32,10 @@ offset_t* wotr_write(wotr_t* w, const char* logdata, size_t len, int flush);
     
 extern WOTR_LIBRARY_API
 int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len, size_t version);
-    
+
+extern WOTR_LIBRARY_API
+int wotr_p_get(wotr_t* w, size_t offset, size_t len, char** data);
+
 extern WOTR_LIBRARY_API
 void wotr_close(wotr_t* w);
     
