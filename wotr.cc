@@ -92,41 +92,43 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len, size_t version) {
     return -1;
   }
   
-  item_header *header = (item_header*)malloc(sizeof(item_header));
+  item_header header;
 
   // read the header
   // use pread for thread safety
-  if (pread(_log, (char*)header, sizeof(item_header), (off_t)offset) < 0) {
+  if (pread(_log, (char*)&header, sizeof(item_header), (off_t)offset) < 0) {
     std::cout << "bad read header: " << strerror(errno) << std::endl;
     return -1;
   }
 
   // don't need the CF id right now, but it is in the header
-  char *kbuf = (char*)malloc(header->ksize * sizeof(char));
-  char *vbuf = (char*)malloc(header->vsize * sizeof(char));
+  char *kbuf = (char*)malloc(header.ksize * sizeof(char));
+  char *vbuf = (char*)malloc(header.vsize * sizeof(char));
 
   off_t key_offset = (off_t)offset + sizeof(item_header);
-  off_t value_offset = key_offset + header->ksize;
+  off_t value_offset = key_offset + header.ksize;
 
-  if (pread(_log, kbuf, header->ksize, key_offset) < 0) {
+  if (pread(_log, kbuf, header.ksize, key_offset) < 0) {
     std::cout << "wotrget read key: " << strerror(errno) << std::endl;
     return -1;
   }
 
-  if (pread(_log, vbuf, header->vsize, value_offset) < 0) {
+  if (pread(_log, vbuf, header.vsize, value_offset) < 0) {
     std::cout << "wotrget read value: " << strerror(errno) << std::endl;
     return -1;
   }
 
   *data = vbuf;
-  *len = header->vsize;
+  *len = header.vsize;
   free(kbuf);
-  free(header);
 
   return 0;
 }
 
 int Wotr::WotrPGet(size_t offset, size_t len, char** data) {
+  std::cout << "offset: " << offset << std::endl;
+  std::cout << "len: " << len << std::endl;
+  
   char *vbuf = (char*)malloc(len * sizeof(char));
   if (pread(_log, vbuf, len, offset) < 0) {
     std::cout << "wotrpget read value: " << strerror(errno) << std::endl;
