@@ -126,9 +126,6 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len, size_t version) {
 }
 
 int Wotr::WotrPGet(size_t offset, size_t len, char** data) {
-  std::cout << "offset: " << offset << std::endl;
-  std::cout << "len: " << len << std::endl;
-  
   char *vbuf = (char*)malloc(len * sizeof(char));
   if (pread(_log, vbuf, len, offset) < 0) {
     std::cout << "wotrpget read value: " << strerror(errno) << std::endl;
