@@ -1,17 +1,18 @@
 #include <iostream>
 #include <vector>
 #include <system_error>
-#include <mutex>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 #include "wotr.h"
 
 Wotr::Wotr(const char* logname) {
   _logname = std::string(logname);
+  _statslog = std::ofstream("stats_" + _logname, std::ios::out);
   _offset = 0;
   _db_counter = 0;
   _seq = 0;
@@ -22,7 +23,6 @@ Wotr::Wotr(const char* logname) {
 }
 
 int Wotr::Register(std::string path) {
-  std::scoped_lock lock(_m);
   int ret = _db_counter;
   _dbs.insert(std::make_pair(_db_counter, path));
   _db_counter++;
@@ -60,13 +60,16 @@ int safe_write(int fd, const char* data, size_t size) {
 
 // append to log
 logoffset_t* Wotr::WotrWrite(std::string& logdata, int flush) {
-  std::scoped_lock lock(_m);
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  size_t starttime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
   if (lseek(_log, _offset, SEEK_SET) < 0) {
     std::cout << "wotrwrite: Error seeking log" << std::endl;
     return nullptr;
   }
+  size_t bytes_to_write = logdata.size();
 
-  if (safe_write(_log, logdata.data(), logdata.size()) < 0) {
+  if (safe_write(_log, logdata.data(), bytes_to_write) < 0) {
     std::cout << "wotrwrite write data: " << strerror(errno) << std::endl;
     return nullptr;
   }
@@ -74,14 +77,16 @@ logoffset_t* Wotr::WotrWrite(std::string& logdata, int flush) {
   if (flush && fsync(_log) < 0) {
     return nullptr;
   }
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  size_t endtime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+  _statslog << "bytes_written: " << bytes_to_write << " start: " << starttime <<
+    " duration_ns: " << endtime - starttime << std::endl;
 
   logoffset_t* ret = new logoffset_t;
   ret->offset = (size_t)_offset;
   ret->seq = _seq;
   
   _offset += logdata.size();
-  _versions.insert(std::make_pair(_seq, _offset));
-  _seq++;
   return ret;
 }
 

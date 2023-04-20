@@ -5,6 +5,7 @@
 #include <string>
 #include <mutex>
 #include <unordered_map>
+#include <fstream>
 
 typedef struct {
   size_t ksize;
@@ -37,7 +38,7 @@ private:
   int _db_counter;
   size_t _seq;
   off_t _offset;
-  std::mutex _m;
+  std::ofstream _statslog;
   std::unordered_map<int, std::string> _dbs;
   std::unordered_map<size_t, off_t> _versions;
 };
