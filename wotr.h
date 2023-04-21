@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <fstream>
 
+#define STAT_BUF_SIZE (4096)
+
 typedef struct {
   size_t ksize;
   size_t vsize;
@@ -38,9 +40,14 @@ private:
   int _db_counter;
   size_t _seq;
   off_t _offset;
-  std::ofstream _statslog;
+
   std::unordered_map<int, std::string> _dbs;
   std::unordered_map<size_t, off_t> _versions;
+
+  int _statslog; // fd
+  char* _statsstart;
+  char* _statsptr;
+  size_t _inception; // time in ns start of program
 };
 
 #endif // WOTR_H

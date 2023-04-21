@@ -8,18 +8,35 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
 #include "wotr.h"
 
 Wotr::Wotr(const char* logname) {
   _logname = std::string(logname);
-  _statslog = std::ofstream("stats_" + _logname, std::ios::out);
   _offset = 0;
   _db_counter = 0;
   _seq = 0;
+  // open wotr valuelog
   if ((_log = open(logname, O_RDWR | O_CREAT | O_APPEND, S_IRWXU)) < 0) {
     std::cout << "Error opening wotr" << std::endl;
     throw std::system_error(errno, std::generic_category(), logname);
   }
+  lseek(_log, 0, SEEK_END);
+
+  std::string stats_fname = _logname + ".stats";
+  std::cout << stats_fname << std::endl;
+  // open stats logging file
+  if ((_statslog = open(stats_fname.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRWXU)) < 0) {
+    std::cout << "Error opening stats file" << std::endl;
+    throw std::system_error(errno, std::generic_category(), logname);
+  }
+
+  _statsstart = (char*)malloc(STAT_BUF_SIZE * sizeof(char));
+  _statsptr = _statsstart;
+
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  _inception = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 }
 
 int Wotr::Register(std::string path) {
@@ -77,10 +94,21 @@ logoffset_t* Wotr::WotrWrite(std::string& logdata, int flush) {
   if (flush && fsync(_log) < 0) {
     return nullptr;
   }
+  
   clock_gettime(CLOCK_MONOTONIC, &ts);
   size_t endtime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
-  _statslog << "bytes_written: " << bytes_to_write << " start: " << starttime <<
-    " duration_ns: " << endtime - starttime << std::endl;
+
+  int len = snprintf(_statsptr, STAT_BUF_SIZE - (_statsptr - _statsstart),
+                     "written: %ld start: %ld dur: %ld\n",
+                     bytes_to_write, starttime - _inception,
+                     endtime - starttime);
+  _statsptr += len;
+
+  // flush the buffer, reset
+  if ((STAT_BUF_SIZE - (_statsptr - _statsstart)) < 100) {
+    dprintf(_statslog, "%s", _statsstart);
+    _statsptr = _statsstart;
+  }
 
   logoffset_t* ret = new logoffset_t;
   ret->offset = (size_t)_offset;
@@ -145,6 +173,9 @@ int Wotr::Flush() {
 }
 
 int Wotr::CloseAndDestroy() {
+  // flush the buffer
+  dprintf(_statslog, "%s", _statsstart);
+
   close(_log);
   return unlink(_logname.c_str());
 }
