@@ -24,10 +24,10 @@ class Wotr {
 public:
   Wotr (const char* logname);
 
-  logoffset_t* WotrWrite(std::string& logdata, int flush);
+  logoffset_t* WotrWrite(std::string& logdata);
   int WotrGet(size_t offset, char** data, size_t* len, size_t version);
   int WotrPGet(size_t offset, size_t len, char** data);
-  int Flush();
+  int Sync();
 
   int Register(std::string path);
   void UnRegister(int ident);

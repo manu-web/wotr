@@ -35,10 +35,10 @@ extern "C" {
     return w->rep->NumRegistered();
   }
     
-  offset_t* wotr_write(wotr_t* w, const char* logdata, size_t len, int flush) {
+  offset_t* wotr_write(wotr_t* w, const char* logdata, size_t len) {
     std::string data(logdata, len);
     offset_t* res = new offset_t;
-    res->rep = w->rep->WotrWrite(data, flush);
+    res->rep = w->rep->WotrWrite(data);
     return res;
   }
   
@@ -56,7 +56,7 @@ extern "C" {
     delete w;
   }
 
-  int wotr_flush(wotr_t* w) {
-    return w->rep->Flush();
+  int wotr_sync(wotr_t* w) {
+    return w->rep->Sync();
   }
 }

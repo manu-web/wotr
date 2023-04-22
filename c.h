@@ -28,7 +28,7 @@ extern WOTR_LIBRARY_API
 int wotr_numregister(wotr_t* w);
     
 extern WOTR_LIBRARY_API
-offset_t* wotr_write(wotr_t* w, const char* logdata, size_t len, int flush);
+offset_t* wotr_write(wotr_t* w, const char* logdata, size_t len);
     
 extern WOTR_LIBRARY_API
 int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len, size_t version);
@@ -40,7 +40,7 @@ extern WOTR_LIBRARY_API
 void wotr_close(wotr_t* w);
     
 extern WOTR_LIBRARY_API
-int wotr_flush(wotr_t* w);
+int wotr_sync(wotr_t* w);
 
 
 #ifdef __cplusplus

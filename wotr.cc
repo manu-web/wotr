@@ -76,7 +76,7 @@ int safe_write(int fd, const char* data, size_t size) {
 }
 
 // append to log
-logoffset_t* Wotr::WotrWrite(std::string& logdata, int flush) {
+logoffset_t* Wotr::WotrWrite(std::string& logdata) {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   size_t starttime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
@@ -88,10 +88,6 @@ logoffset_t* Wotr::WotrWrite(std::string& logdata, int flush) {
 
   if (safe_write(_log, logdata.data(), bytes_to_write) < 0) {
     std::cout << "wotrwrite write data: " << strerror(errno) << std::endl;
-    return nullptr;
-  }
-
-  if (flush && fsync(_log) < 0) {
     return nullptr;
   }
   
@@ -168,7 +164,7 @@ int Wotr::WotrPGet(size_t offset, size_t len, char** data) {
   return 0;
 }
 
-int Wotr::Flush() {
+int Wotr::Sync() {
   return fsync(_log);
 }
 
