@@ -77,9 +77,9 @@ int safe_write(int fd, const char* data, size_t size) {
 
 // append to log
 logoffset_t* Wotr::WotrWrite(std::string& logdata) {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  size_t starttime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+//  struct timespec ts;
+//  clock_gettime(CLOCK_MONOTONIC, &ts);
+//  size_t starttime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
   if (lseek(_log, _offset, SEEK_SET) < 0) {
     std::cout << "wotrwrite: Error seeking log" << std::endl;
     return nullptr;
@@ -91,20 +91,20 @@ logoffset_t* Wotr::WotrWrite(std::string& logdata) {
     return nullptr;
   }
   
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  size_t endtime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+//  clock_gettime(CLOCK_MONOTONIC, &ts);
+//  size_t endtime = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 
-  int len = snprintf(_statsptr, STAT_BUF_SIZE - (_statsptr - _statsstart),
-                     "written: %ld start: %ld dur: %ld\n",
-                     bytes_to_write, starttime - _inception,
-                     endtime - starttime);
-  _statsptr += len;
+  // int len = snprintf(_statsptr, STAT_BUF_SIZE - (_statsptr - _statsstart),
+  //                    "written: %ld start: %ld dur: %ld\n",
+  //                    bytes_to_write, starttime - _inception,
+  //                    endtime - starttime);
+//  _statsptr += len;
 
   // flush the buffer, reset
-  if ((STAT_BUF_SIZE - (_statsptr - _statsstart)) < 100) {
-    dprintf(_statslog, "%s", _statsstart);
-    _statsptr = _statsstart;
-  }
+  // if ((STAT_BUF_SIZE - (_statsptr - _statsstart)) < 100) {
+  //   dprintf(_statslog, "%s", _statsstart);
+  //   _statsptr = _statsstart;
+  // }
 
   logoffset_t* ret = new logoffset_t;
   ret->offset = (size_t)_offset;
@@ -170,7 +170,7 @@ int Wotr::Sync() {
 
 int Wotr::CloseAndDestroy() {
   // flush the buffer
-  dprintf(_statslog, "%s", _statsstart);
+//  dprintf(_statslog, "%s", _statsstart);
 
   close(_log);
   return unlink(_logname.c_str());
