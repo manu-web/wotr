@@ -13,7 +13,6 @@ extern "C" {
 #include <stdint.h>
 
 typedef struct wotr_t wotr_t;
-typedef struct offset_t offset_t;
 
 extern WOTR_LIBRARY_API
 wotr_t* wotr_open(const char* logfile, char** errptr);
@@ -28,20 +27,22 @@ extern WOTR_LIBRARY_API
 int wotr_numregister(wotr_t* w);
     
 extern WOTR_LIBRARY_API
-offset_t* wotr_write(wotr_t* w, const char* logdata, size_t len);
+ssize_t wotr_write(wotr_t* w, const char* logdata, size_t len);
     
 extern WOTR_LIBRARY_API
-int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len, size_t version);
+int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len);
 
 extern WOTR_LIBRARY_API
-int wotr_p_get(wotr_t* w, size_t offset, size_t len, char** data);
+int wotr_p_get(wotr_t* w, size_t offset, char** data, size_t len);
 
 extern WOTR_LIBRARY_API
-void wotr_close(wotr_t* w);
+ssize_t wotr_head(wotr_t* w);
     
 extern WOTR_LIBRARY_API
 int wotr_sync(wotr_t* w);
 
+extern WOTR_LIBRARY_API
+void wotr_close(wotr_t* w);
 
 #ifdef __cplusplus
 } /* end extern "C" */

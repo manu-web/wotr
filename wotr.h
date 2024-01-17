@@ -15,18 +15,14 @@ typedef struct {
   uint32_t cfid;
 } item_header;
 
-typedef struct {
-  size_t seq;
-  size_t offset;
-} logoffset_t;
-
 class Wotr {
 public:
   Wotr (const char* logname);
 
-  logoffset_t* WotrWrite(std::string& logdata);
-  int WotrGet(size_t offset, char** data, size_t* len, size_t version);
-  int WotrPGet(size_t offset, size_t len, char** data);
+  ssize_t WotrWrite(std::string& logdata);
+  int WotrGet(size_t offset, char** data, size_t* len);
+  int WotrPGet(size_t offset, char** data, size_t len);
+  ssize_t Head();
   int Sync();
 
   int Register(std::string path);
@@ -38,12 +34,12 @@ private:
   std::string _logname;
   int _log; // fd
   int _db_counter;
-  size_t _seq;
-  off_t _offset;
+  ssize_t _offset;
+  std::mutex _lock;
 
   std::unordered_map<int, std::string> _dbs;
-  std::unordered_map<size_t, off_t> _versions;
 
+  // maybe useful later... these are set up in Wotr::Wotr()
   int _statslog; // fd
   char* _statsstart;
   char* _statsptr;
