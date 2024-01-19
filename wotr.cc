@@ -51,8 +51,70 @@ void Wotr::UnRegister(int ident) {
   _dbs.erase(ident);
 }
 
+int StartupRecovery(std::string path, size_t location) {
+  std::lock_guard<std::mutex> lock(_lock);
+
+  struct kv_entry_info* entry;
+  struct stat stbuf;
+  fstat(_log, &stbuf);
+
+  DB* db = _dbs.get(path)
+
+  while (location < stbuf.st_size) {
+    if (lseek(_log, location, SEEK_SET) < 0) {
+      std::cout << "startuprecovery: Error seeking log" << std::endl;
+      return -1;
+    }
+
+    entry = get_recovery_entry(location);
+    if (entry == nullptr) {
+      std::cout << "startuprecovery: read entry error at " << location << std::endl;
+      return -1;
+    }
+
+    char* key = malloc(sizeof(char) * entry->ksize);
+
+    if (pread(_log, &key, entry->ksize, entry->key_offset) < 0) {
+      std::cout << "startup_recovery: bad read key" << std::endl;
+    }
+
+    // to_string?
+    Status s = db->Put(key, std::to_string(entry->value_offset));
+
+    if (!s.ok()) {
+      std::cout << "startuprecovery: db put error" << std::endl;
+      return -1;
+    }
+    location += entry->size;
+  }
+}
+
 int Wotr::NumRegistered() {
   return _dbs.size();
+}
+
+struct kv_entry_info* get_recovery_entry(size_t offset) {
+  // read the header
+  // use pread for thread safety
+  item_header header;
+  if (pread(_log, (char*)&header, sizeof(item_header), (ssize_t)offset) < 0) {
+    std::cout << "get_recovery_entry: bad read header: "
+	      << strerror(errno) << std::endl;
+    return nullptr;
+  }
+
+  struct kv_entry_info* entry = malloc(sizeof(struct kv_entry_info));
+  if (entry == NULL) {
+    return nullptr;
+  }
+
+  entry->ksize = header.ksize;
+  entry->vsize = header.vsize;
+  entry->key_offset = offset + sizeof(item_header);
+  entry->value_offset = entry->key_offset + header.ksize;
+  entry->next = sizeof(item_header) + header.ksize + header.vsize;
+  
+  return entry;
 }
 
 int safe_write(int fd, const char* data, size_t size) {

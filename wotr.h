@@ -15,6 +15,14 @@ typedef struct {
   uint32_t cfid;
 } item_header;
 
+struct kv_entry_info {
+  size_t ksize;
+  size_t vsize;
+  size_t key_offset;
+  size_t value_offset;
+  size_t size; // entry size. use to get offset of next entry if iterating log
+};
+
 class Wotr {
 public:
   Wotr (const char* logname);
@@ -28,6 +36,7 @@ public:
   int Register(std::string path);
   void UnRegister(int ident);
   int NumRegistered();
+  int StartupRecovery(size_t logstart);
   int CloseAndDestroy();
 
 private:
