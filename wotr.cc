@@ -40,25 +40,33 @@ Wotr::Wotr(const char* logname) {
 }
 
 int Wotr::Register(std::string path) {
-  int ret = _db_counter;
-  _dbs.insert(std::make_pair(_db_counter, path));
-  _db_counter++;
-
-  return ret;
+  rocksdb::DB* db;
+  rocksdb::Options options;
+  
+  rocksdb::Status s = rocksdb::DB::Open(options, path, &db);
+  if (!s.ok()) {
+    std::cout << "wotr: error opening db" << std::endl;
+    return 1;
+  }
+  
+  _dbs.insert(std::make_pair(path, db));
+  return 0;
 }
 
-void Wotr::UnRegister(int ident) {
-  _dbs.erase(ident);
+void Wotr::UnRegister(std::string path) {
+  _dbs.erase(path);
 }
 
-int StartupRecovery(std::string path, size_t location) {
+int Wotr::StartupRecovery(std::string path, size_t location) {
   std::lock_guard<std::mutex> lock(_lock);
 
+  const char* errmsg;
+  char* key;
   struct kv_entry_info* entry;
   struct stat stbuf;
   fstat(_log, &stbuf);
 
-  DB* db = _dbs.get(path)
+  rocksdb::DB* db = _dbs.at(path);
 
   while (location < stbuf.st_size) {
     if (lseek(_log, location, SEEK_SET) < 0) {
@@ -66,34 +74,46 @@ int StartupRecovery(std::string path, size_t location) {
       return -1;
     }
 
-    entry = get_recovery_entry(location);
+    entry = get_entry(location);
     if (entry == nullptr) {
       std::cout << "startuprecovery: read entry error at " << location << std::endl;
       return -1;
     }
 
-    char* key = malloc(sizeof(char) * entry->ksize);
+    key = (char*)malloc(sizeof(char) * entry->ksize);
 
     if (pread(_log, &key, entry->ksize, entry->key_offset) < 0) {
-      std::cout << "startup_recovery: bad read key" << std::endl;
+      errmsg = "startup_recovery: bad read key";
+      goto cleanup_and_error;
     }
 
     // to_string?
-    Status s = db->Put(key, std::to_string(entry->value_offset));
+    rocksdb::WriteOptions wopts;
+    rocksdb::Status s = db->Put(wopts, key, std::to_string(entry->value_offset));
 
     if (!s.ok()) {
-      std::cout << "startuprecovery: db put error" << std::endl;
-      return -1;
+      errmsg = "startup_recovery: db put error";
+      goto cleanup_and_error;
     }
+    
     location += entry->size;
+    free(key);
+    free(entry);
   }
+  return 0;
+  
+ cleanup_and_error:
+  free(key);
+  free(entry);
+  std::cout << errmsg << std::endl;
+  return -1;
 }
 
 int Wotr::NumRegistered() {
   return _dbs.size();
 }
 
-struct kv_entry_info* get_recovery_entry(size_t offset) {
+struct kv_entry_info* Wotr::get_entry(size_t offset) {
   // read the header
   // use pread for thread safety
   item_header header;
@@ -103,7 +123,7 @@ struct kv_entry_info* get_recovery_entry(size_t offset) {
     return nullptr;
   }
 
-  struct kv_entry_info* entry = malloc(sizeof(struct kv_entry_info));
+  struct kv_entry_info* entry = (struct kv_entry_info*)malloc(sizeof(struct kv_entry_info));
   if (entry == NULL) {
     return nullptr;
   }
@@ -112,7 +132,7 @@ struct kv_entry_info* get_recovery_entry(size_t offset) {
   entry->vsize = header.vsize;
   entry->key_offset = offset + sizeof(item_header);
   entry->value_offset = entry->key_offset + header.ksize;
-  entry->next = sizeof(item_header) + header.ksize + header.vsize;
+  entry->size = sizeof(item_header) + header.ksize + header.vsize;
   
   return entry;
 }
@@ -155,35 +175,22 @@ ssize_t Wotr::WotrWrite(std::string& logdata) {
 }
 
 int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
-  // read the header
-  // use pread for thread safety
-  item_header header;
-  if (pread(_log, (char*)&header, sizeof(item_header), (ssize_t)offset) < 0) {
-    std::cout << "bad read header: " << strerror(errno) << std::endl;
+  struct kv_entry_info* entry = get_entry(offset);
+
+  if (entry == nullptr) {
+    free(entry);
     return -1;
   }
 
-  // don't need the CF id right now, but it is in the header
-  // don't really need the kbuf either, but it might be handy later
-  char *kbuf = (char*)malloc(header.ksize * sizeof(char));
-  char *vbuf = (char*)malloc(header.vsize * sizeof(char));
-
-  off_t key_offset = (off_t)offset + sizeof(item_header);
-  off_t value_offset = key_offset + header.ksize;
-
-  if (pread(_log, kbuf, header.ksize, key_offset) < 0) {
-    std::cout << "wotrget read key: " << strerror(errno) << std::endl;
-    return -1;
-  }
-
-  if (pread(_log, vbuf, header.vsize, value_offset) < 0) {
+  char *vbuf = (char*)malloc(entry->vsize * sizeof(char));
+  
+  if (pread(_log, vbuf, entry->vsize, entry->value_offset) < 0) {
     std::cout << "wotrget read value: " << strerror(errno) << std::endl;
     return -1;
   }
-
+  
   *data = vbuf;
-  *len = header.vsize;
-  free(kbuf);
+  *len = entry->vsize;
 
   return 0;
 }

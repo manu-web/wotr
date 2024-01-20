@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <fstream>
 
+#include "rocksdb/db.h"
+
 #define STAT_BUF_SIZE (4096)
 
 typedef struct {
@@ -34,9 +36,9 @@ public:
   int Sync();
 
   int Register(std::string path);
-  void UnRegister(int ident);
+  void UnRegister(std::string path);
   int NumRegistered();
-  int StartupRecovery(size_t logstart);
+  int StartupRecovery(std::string path, size_t logstart);
   int CloseAndDestroy();
 
 private:
@@ -46,7 +48,10 @@ private:
   ssize_t _offset;
   std::mutex _lock;
 
-  std::unordered_map<int, std::string> _dbs;
+  std::unordered_map<std::string, rocksdb::DB*> _dbs;
+
+  struct kv_entry_info* get_entry(size_t offset);
+  int safe_write(int fd, const char* data, size_t size);
 
   // maybe useful later... these are set up in Wotr::Wotr()
   int _statslog; // fd
