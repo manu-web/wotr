@@ -39,94 +39,26 @@ Wotr::Wotr(const char* logname) {
   _inception = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 }
 
-int Wotr::Register(std::string path) {
-  rocksdb::DB* db;
-  rocksdb::Options options;
-  
-  rocksdb::Status s = rocksdb::DB::Open(options, path, &db);
-  if (!s.ok()) {
-    std::cout << "wotr: error opening db " << path << std::endl;
-    std::cout << "returned status: " << s.ToString() << std::endl;
-    return 1;
-  }
-  
-  _dbs.insert(std::make_pair(path, db));
-  return 0;
-}
-
-void Wotr::UnRegister(std::string path) {
-  _dbs.erase(path);
-}
-
-int Wotr::StartupRecovery(std::string path, size_t location) {
-  std::lock_guard<std::mutex> lock(_lock);
-
-  const char* errmsg;
-  char* key;
-  struct kv_entry_info* entry;
+int Wotr::get_entry(size_t offset, struct kv_entry_info* entry) {
   struct stat stbuf;
-  fstat(_log, &stbuf);
-
-  rocksdb::DB* db = _dbs.at(path);
-
-  while (location < stbuf.st_size) {
-    if (lseek(_log, location, SEEK_SET) < 0) {
-      std::cout << "startuprecovery: Error seeking log" << std::endl;
-      return -1;
-    }
-
-    entry = get_entry(location);
-    if (entry == nullptr) {
-      std::cout << "startuprecovery: read entry error at " << location << std::endl;
-      return -1;
-    }
-
-    key = (char*)malloc(sizeof(char) * entry->ksize);
-
-    if (pread(_log, &key, entry->ksize, entry->key_offset) < 0) {
-      errmsg = "startup_recovery: bad read key";
-      goto cleanup_and_error;
-    }
-
-    // to_string?
-    rocksdb::WriteOptions wopts;
-    rocksdb::Status s = db->Put(wopts, key, std::to_string(entry->value_offset));
-
-    if (!s.ok()) {
-      errmsg = "startup_recovery: db put error";
-      goto cleanup_and_error;
-    }
-    
-    location += entry->size;
-    free(key);
-    free(entry);
+  // do we have to stat every time?
+  if (fstat(_log, &stbuf) < 0) {
+    std::cout << "fstat problem: " << strerror(errno) << std::endl;
+    return -1;
   }
-  return 0;
-  
- cleanup_and_error:
-  free(key);
-  free(entry);
-  std::cout << errmsg << std::endl;
-  return -1;
-}
 
-int Wotr::NumRegistered() {
-  return _dbs.size();
-}
+  // end of log reached
+  if (offset >= stbuf.st_size) {
+    return -1;
+  }
 
-struct kv_entry_info* Wotr::get_entry(size_t offset) {
   // read the header
   // use pread for thread safety
   item_header header;
   if (pread(_log, (char*)&header, sizeof(item_header), (ssize_t)offset) < 0) {
     std::cout << "get_recovery_entry: bad read header: "
 	      << strerror(errno) << std::endl;
-    return nullptr;
-  }
-
-  struct kv_entry_info* entry = (struct kv_entry_info*)malloc(sizeof(struct kv_entry_info));
-  if (entry == NULL) {
-    return nullptr;
+    return -1;
   }
 
   entry->ksize = header.ksize;
@@ -135,7 +67,7 @@ struct kv_entry_info* Wotr::get_entry(size_t offset) {
   entry->value_offset = entry->key_offset + header.ksize;
   entry->size = sizeof(item_header) + header.ksize + header.vsize;
   
-  return entry;
+  return 0;
 }
 
 int Wotr::safe_write(int fd, const char* data, size_t size) {
@@ -176,22 +108,21 @@ ssize_t Wotr::WotrWrite(std::string& logdata) {
 }
 
 int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
-  struct kv_entry_info* entry = get_entry(offset);
-
-  if (entry == nullptr) {
-    free(entry);
+  struct kv_entry_info entry;
+  if (get_entry(offset, &entry) != 0) {
+    std::cout << "wotrget: problem getting entry" << std::endl;
     return -1;
   }
 
-  char *vbuf = (char*)malloc(entry->vsize * sizeof(char));
+  char *vbuf = (char*)malloc(entry.vsize * sizeof(char));
   
-  if (pread(_log, vbuf, entry->vsize, entry->value_offset) < 0) {
-    std::cout << "wotrget read value: " << strerror(errno) << std::endl;
+  if (pread(_log, vbuf, entry.vsize, entry.value_offset) < 0) {
+    std::cout << "wotrget: read value: " << strerror(errno) << std::endl;
     return -1;
   }
   
   *data = vbuf;
-  *len = entry->vsize;
+  *len = entry.vsize;
 
   return 0;
 }

@@ -21,19 +21,6 @@ extern "C" {
     return res;
   }
 
-  int wotr_register(wotr_t* w, const char* pathstr, size_t len) {
-    std::string path(pathstr, len);
-    return w->rep->Register(path);
-  }
-
-  void wotr_unregister(wotr_t* w, int ident) {
-    return w->rep->UnRegister(ident);
-  }
-
-  int wotr_numregistered(wotr_t* w) {
-    return w->rep->NumRegistered();
-  }
-    
   ssize_t wotr_write(wotr_t* w, const char* logdata, size_t len) {
     std::string data(logdata, len);
     return = w->rep->WotrWrite(data);
