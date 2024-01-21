@@ -45,7 +45,8 @@ int Wotr::Register(std::string path) {
   
   rocksdb::Status s = rocksdb::DB::Open(options, path, &db);
   if (!s.ok()) {
-    std::cout << "wotr: error opening db" << std::endl;
+    std::cout << "wotr: error opening db " << path << std::endl;
+    std::cout << "returned status: " << s.ToString() << std::endl;
     return 1;
   }
   
@@ -137,7 +138,7 @@ struct kv_entry_info* Wotr::get_entry(size_t offset) {
   return entry;
 }
 
-int safe_write(int fd, const char* data, size_t size) {
+int Wotr::safe_write(int fd, const char* data, size_t size) {
   const char* src = data;
   size_t ret, remaining;
   remaining = size;
