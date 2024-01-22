@@ -42,7 +42,7 @@ public:
   void UnRegister(std::string path);
   int NumRegistered();
   int StartupRecovery(std::string path, size_t logstart);
-  int get_entry(size_t offset, struct kv_entry_info* entry);
+
   int CloseAndDestroy();
 
   friend class WotrIter;
@@ -56,8 +56,9 @@ private:
 
   std::unordered_map<std::string, rocksdb::DB*> _dbs;
 
-
+  int check_bounds(size_t offset); 
   int safe_write(int fd, const char* data, size_t size);
+  int get_entry(size_t offset, Entry* entry);
 
   // maybe useful later... these are set up in Wotr::Wotr()
   int _statslog; // fd

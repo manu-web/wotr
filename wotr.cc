@@ -39,19 +39,9 @@ Wotr::Wotr(const char* logname) {
   _inception = static_cast<size_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 }
 
-int Wotr::get_entry(size_t offset, struct kv_entry_info* entry) {
-  struct stat stbuf;
-  // do we have to stat every time?
-  if (fstat(_log, &stbuf) < 0) {
-    std::cout << "fstat problem: " << strerror(errno) << std::endl;
-    return -1;
-  }
 
-  // end of log reached
-  if (offset >= stbuf.st_size) {
-    return -1;
-  }
-
+// use check_bounds() before calling this function to ensure offset is in range
+int Wotr::get_entry(size_t offset, Entry* entry) {
   // read the header
   // use pread for thread safety
   item_header header;
@@ -66,6 +56,7 @@ int Wotr::get_entry(size_t offset, struct kv_entry_info* entry) {
   entry->key_offset = offset + sizeof(item_header);
   entry->value_offset = entry->key_offset + header.ksize;
   entry->size = sizeof(item_header) + header.ksize + header.vsize;
+  entry->offset = offset;
   
   return 0;
 }
@@ -108,7 +99,11 @@ ssize_t Wotr::WotrWrite(std::string& logdata) {
 }
 
 int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
-  struct kv_entry_info entry;
+  if (check_bounds(offset) < 0) {
+    return -1;
+  }
+  
+  Entry entry;
   if (get_entry(offset, &entry) != 0) {
     std::cout << "wotrget: problem getting entry" << std::endl;
     return -1;
@@ -152,37 +147,26 @@ int Wotr::CloseAndDestroy() {
   return unlink(_logname.c_str());
 }
 
+int Wotr::check_bounds(size_t offset) {
+  struct stat stbuf;
+  if (fstat(_log, &stbuf) < 0 || offset >= stbuf.st_size) {
+    std::cout << "wotr check bounds fail" << strerror(errno) << std::endl;
+    return -1;
+  }
+
+  return 0;
+}
+
 WotrIter::WotrIter(Wotr& wotr)
   : w(wotr), _offset(0) {}
 
 int WotrIter::read(Entry* entry) {
-  struct stat stbuf;
-  if (fstat(w._log, &stbuf) < 0) {
-    std::cout << "fstat problem: " << strerror(errno) << std::endl;
+  if (w.check_bounds(_offset) < 0) {
+    std::cout << "wotr iter read out of bounds" << std::endl;
     return -1;
   }
-
-  // end of log reached
-  if (_offset >= stbuf.st_size) {
-    std::cout << "offset not in log bounds: " << _offset << std::endl;
-    return -1;
-  }
-
-  // read the header
-  // use pread for thread safety
-  item_header header;
-  if (pread(w._log, (char*)&header, sizeof(item_header), (ssize_t)_offset) < 0) {
-    std::cout << "at: bad read header: " << strerror(errno) << std::endl;
-    return -1;
-  }
-
-  current.ksize = header.ksize;
-  current.vsize = header.vsize;
-  current.key_offset = _offset + sizeof(item_header);
-  current.value_offset = entry->key_offset + header.ksize;
-  current.size = sizeof(item_header) + header.ksize + header.vsize;
-  current.offset = _offset;
-
+  
+  w.get_entry(_offset, &current);
   memcpy(entry, &current, sizeof(Entry));
   return 0;
 }
