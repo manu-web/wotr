@@ -6,6 +6,8 @@
 
 extern "C" {
   struct wotr_t      { Wotr* rep; };
+  struct wotr_iter_t { WotrIter* rep; };
+  struct entry_t     { Entry* rep; };
 
   wotr_t* wotr_open(const char* logfile, char** errptr) {
     Wotr* w;
@@ -38,7 +40,6 @@ extern "C" {
     return w->rep->WotrHead();
   }
 
-
   int wotr_sync(wotr_t* w) {
     return w->rep->Sync();
   }
@@ -47,4 +48,40 @@ extern "C" {
     delete w->rep;
     delete w;
   }
+
+  wotr_iter_t* wotr_iter_init(wotr_t* w, char** errptr) {
+    WotrIter* wi;
+
+    try {
+      wi = new WotrIter(*(w->rep));
+    } catch (const std::system_error& e) {
+      *errptr = strdup(e.what());
+      return nullptr;
+    }
+
+    wotr_iter_t* res = new wotr_iter_t;
+    res->rep = wi;
+    return res;
+  }
+
+  int wotr_iter_read(wotr_iter_t* wi, entry_t* e) {
+    wi->rep->read(e->entry);
+  }
+
+  void wotr_iter_set_offset(wotr_iter_t* wi, size_t offset) {
+    wi->rep->set_offset(offset);
+  }
+
+  void wotr_iter_next(wotr_iter_t* wi) {
+    wi->rep->next();
+  }
+
+  char* wotr_iter_read_key(wotr_iter_t* wi) {
+    return wi->rep->read();
+  }
+
+  char* wotr_iter_read_value(wotr_iter_t* wi) {
+    return wi->rep->read();
+  }
+
 }
