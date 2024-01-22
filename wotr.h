@@ -22,8 +22,11 @@ struct kv_entry_info {
   size_t vsize;
   size_t key_offset;
   size_t value_offset;
+  size_t offset; // offset of the header
   size_t size; // entry size. use to get offset of next entry if iterating log
 };
+
+typedef kv_entry_info Entry;
 
 class Wotr {
 public:
@@ -42,6 +45,8 @@ public:
   int get_entry(size_t offset, struct kv_entry_info* entry);
   int CloseAndDestroy();
 
+  friend class WotrIter;
+
 private:
   std::string _logname;
   int _log; // fd
@@ -59,6 +64,23 @@ private:
   char* _statsstart;
   char* _statsptr;
   size_t _inception; // time in ns start of program
+};
+
+class WotrIter {
+public:
+  WotrIter(Wotr& wotr);
+
+  int read(Entry* entry);
+  void set_offset(size_t offset);
+  void next();
+
+  char* read_key();
+  char* read_value();
+
+private:
+  Wotr& w;
+  Entry current;
+  size_t _offset;
 };
 
 #endif // WOTR_H

@@ -151,3 +151,68 @@ int Wotr::CloseAndDestroy() {
   close(_log);
   return unlink(_logname.c_str());
 }
+
+WotrIter::WotrIter(Wotr& wotr)
+  : w(wotr), _offset(0) {}
+
+int WotrIter::read(Entry* entry) {
+  struct stat stbuf;
+  if (fstat(w._log, &stbuf) < 0) {
+    std::cout << "fstat problem: " << strerror(errno) << std::endl;
+    return -1;
+  }
+
+  // end of log reached
+  if (_offset >= stbuf.st_size) {
+    std::cout << "offset not in log bounds: " << _offset << std::endl;
+    return -1;
+  }
+
+  // read the header
+  // use pread for thread safety
+  item_header header;
+  if (pread(w._log, (char*)&header, sizeof(item_header), (ssize_t)_offset) < 0) {
+    std::cout << "at: bad read header: " << strerror(errno) << std::endl;
+    return -1;
+  }
+
+  current.ksize = header.ksize;
+  current.vsize = header.vsize;
+  current.key_offset = _offset + sizeof(item_header);
+  current.value_offset = entry->key_offset + header.ksize;
+  current.size = sizeof(item_header) + header.ksize + header.vsize;
+  current.offset = _offset;
+
+  memcpy(entry, &current, sizeof(Entry));
+  return 0;
+}
+
+void WotrIter::set_offset(size_t offset) {
+  _offset = offset;
+}
+
+// n.b. always read() between calls to next() to load the entry at _offset
+//      into "current", or this will break. Design could be improved later...
+void WotrIter::next() {
+  _offset += current.size;
+}
+
+char* WotrIter::read_key() {
+  char* key = (char*)malloc(sizeof(char) * current.ksize);
+  if (pread(w._log, key, current.ksize, current.key_offset) < 0) {
+    std::cout << "read_key: pread error" << strerror(errno) << std::endl;
+    return nullptr;
+  }
+  return key;
+}
+
+char* WotrIter::read_value() {
+  char* value = (char*)malloc(sizeof(char) * current.vsize);
+  if (pread(w._log, value, current.vsize, current.value_offset) < 0) {
+    std::cout << "read_value: pread error" << strerror(errno) << std::endl;
+    return nullptr;
+  }
+  return value;
+
+}
+
