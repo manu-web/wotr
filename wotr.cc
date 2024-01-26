@@ -199,4 +199,3 @@ char* WotrIter::read_value() {
   return value;
 
 }
-
