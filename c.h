@@ -11,9 +11,11 @@ extern "C" {
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h> // needed on my fedora system to compile ssize_t?
 
 typedef struct wotr_t wotr_t;
 typedef struct wotr_iter_t wotr_iter_t;
+typedef struct entry_t entry_t;
 
 extern WOTR_LIBRARY_API
 wotr_t* wotr_open(const char* logfile, char** errptr);

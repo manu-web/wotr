@@ -25,11 +25,11 @@ extern "C" {
 
   ssize_t wotr_write(wotr_t* w, const char* logdata, size_t len) {
     std::string data(logdata, len);
-    return = w->rep->WotrWrite(data);
+    return w->rep->WotrWrite(data);
   }
   
   int wotr_get(wotr_t* w, size_t offset, char** data, size_t* len) {
-    return w->rep->WotrGet(offset, data, len, version);
+    return w->rep->WotrGet(offset, data, len);
   }
 
   int wotr_p_get(wotr_t* w, size_t offset, char** data, size_t len) {
@@ -37,7 +37,7 @@ extern "C" {
   }
 
   ssize_t wotr_head(wotr_t* w) {
-    return w->rep->WotrHead();
+    return w->rep->Head();
   }
 
   int wotr_sync(wotr_t* w) {
@@ -65,7 +65,7 @@ extern "C" {
   }
 
   int wotr_iter_read(wotr_iter_t* wi, entry_t* e) {
-    wi->rep->read(e->entry);
+    return wi->rep->read(e->rep);
   }
 
   void wotr_iter_set_offset(wotr_iter_t* wi, size_t offset) {
@@ -77,11 +77,11 @@ extern "C" {
   }
 
   char* wotr_iter_read_key(wotr_iter_t* wi) {
-    return wi->rep->read();
+    return wi->rep->read_key();
   }
 
   char* wotr_iter_read_value(wotr_iter_t* wi) {
-    return wi->rep->read();
+    return wi->rep->read_value();
   }
 
 }

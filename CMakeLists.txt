@@ -3,7 +3,7 @@ project(wotr)
 set(CMAKE_CXX_STANDARD 17)
 
 get_filename_component(PARENT_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
-SET(ROCKSDB_DIR "${PARENT_DIR}/rocksdb-1")
+SET(ROCKSDB_DIR "${PARENT_DIR}/rocksdb")
 
 include_directories("${ROCKSDB_DIR}/include")
 include_directories("${PROJECT_SOURCE_DIR}")
