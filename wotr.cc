@@ -23,6 +23,12 @@ Wotr::Wotr(const char* logname) {
   }
   lseek(_log, 0, SEEK_END);
 
+  struct stat stbuf;
+  if (fstat(_log, &stbuf) < 0) {
+    throw std::system_error(errno, std::generic_category(), logname);
+  }
+  _offset = stbuf.st_size;
+
   std::string stats_fname = _logname + ".stats";
   std::cout << stats_fname << std::endl;
   // open stats logging file
@@ -51,6 +57,7 @@ int Wotr::get_entry(size_t offset, Entry* entry) {
     return -1;
   }
 
+  entry->cfid = header.cfid;
   entry->ksize = header.ksize;
   entry->vsize = header.vsize;
   entry->key_offset = offset + sizeof(item_header);
@@ -113,6 +120,7 @@ int Wotr::WotrGet(size_t offset, char** data, size_t* len) {
   
   if (pread(_log, vbuf, entry.vsize, entry.value_offset) < 0) {
     std::cout << "wotrget: read value: " << strerror(errno) << std::endl;
+    std::cout << "attempted offset: " << entry.value_offset << "size: " << entry.vsize << std::endl;
     return -1;
   }
   
@@ -151,6 +159,8 @@ int Wotr::check_bounds(size_t offset) {
   struct stat stbuf;
   if (fstat(_log, &stbuf) < 0 || offset >= stbuf.st_size) {
     std::cout << "wotr check bounds fail" << strerror(errno) << std::endl;
+    std::cout << "attempted offset: " << offset << std::endl;
+    std::cout << "bounds: " << stbuf.st_size << std::endl;
     return -1;
   }
 
@@ -198,4 +208,8 @@ char* WotrIter::read_value() {
   }
   return value;
 
+}
+
+uint32_t WotrIter::GetCfID() {
+  return current.cfid;
 }

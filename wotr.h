@@ -18,6 +18,7 @@ typedef struct {
 } item_header;
 
 struct kv_entry_info {
+  uint32_t cfid;
   size_t ksize;
   size_t vsize;
   size_t key_offset;
@@ -77,6 +78,7 @@ public:
 
   char* read_key();
   char* read_value();
+  uint32_t GetCfID();
 
 private:
   Wotr& w;

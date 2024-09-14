@@ -55,7 +55,10 @@ char* wotr_iter_read_key(wotr_iter_t* wi);
 
 extern WOTR_LIBRARY_API
 char* wotr_iter_read_value(wotr_iter_t* wi);
-    
+
+extern WOTR_LIBRARY_API
+int wotr_iter_get_cfid(wotr_iter_t* wi);
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif

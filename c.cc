@@ -84,4 +84,8 @@ extern "C" {
     return wi->rep->read_value();
   }
 
+  int wotr_iter_get_cfid(wotr_iter_t* wi) {
+    return wi->rep->GetCfID();
+  }
+
 }
